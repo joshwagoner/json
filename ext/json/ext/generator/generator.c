@@ -805,8 +805,24 @@ static void generate_json(FBuffer *buffer, VALUE Vstate, JSON_Generator_State *s
         generate_json_float(buffer, Vstate, state, obj);
     } else if (rb_respond_to(obj, i_to_json)) {
         tmp = rb_funcall(obj, i_to_json, 1, Vstate);
-        Check_Type(tmp, T_STRING);
-        fbuffer_append_str(buffer, tmp);
+        
+        VALUE tmp_klass = CLASS_OF(tmp);
+        if (tmp_klass == rb_cHash || 
+            tmp_klass == rb_cArray ||
+            tmp == Qnil ||
+            tmp == Qfalse ||
+            tmp == Qtrue ||
+            tmp_klass == rb_cFixnum ||
+            tmp_klass == rb_cBignum ||
+            tmp_klass == rb_cFloat) 
+        {
+            //call generate_json again to generate the proper json
+            generate_json(buffer, Vstate, state, tmp);
+        } else {
+            //if not one of the above types it must be a string
+            Check_Type(tmp, T_STRING);
+            fbuffer_append_str(buffer, tmp);
+        }
     } else {
         tmp = rb_funcall(obj, i_to_s, 0);
         Check_Type(tmp, T_STRING);
